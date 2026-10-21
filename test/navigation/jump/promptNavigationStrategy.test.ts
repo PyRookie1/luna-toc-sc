@@ -8,10 +8,8 @@ import {
   it,
   vi,
 } from 'vitest';
-import type { ChatGptNavigationAlgorithm } from '@/config/config';
 
 const mocks = vi.hoisted(() => ({
-  navigationAlgorithm: 'legacy-native' as ChatGptNavigationAlgorithm,
   findPrompt: vi.fn(),
   findText: vi.fn(),
   getContainer: vi.fn(),
@@ -52,10 +50,6 @@ vi.mock('@/navigation/follow/follow', () => ({
   keepFollowing: vi.fn(),
 }));
 
-vi.mock('@/navigation/navigationSettings', () => ({
-  getChatGptNavigationAlgorithm: () => mocks.navigationAlgorithm,
-}));
-
 import {
   initializePromptNavigation,
   jumpToMessage,
@@ -87,7 +81,6 @@ beforeEach(() => {
       return 1;
     })
   );
-  mocks.navigationAlgorithm = 'legacy-native';
 
   initializePromptNavigation({
     getVirtualSearchContext: () => ({
@@ -147,21 +140,19 @@ describe('prompt navigation strategy', () => {
     expect(mocks.findText).not.toHaveBeenCalled();
   });
 
-  it('never jumps to top for an obsolete legacy setting', () => {
+  it('jumps to a currently mounted prompt by exact identity', () => {
     const container = document.createElement('div');
     const target = document.createElement('div');
     document.body.append(container, target);
     target.scrollIntoView = vi.fn();
     mocks.getContainer.mockReturnValue(container);
     mocks.findPrompt.mockReturnValue(target);
-    mocks.navigationAlgorithm = 'legacy-native';
     jumpToMessage({ id: 'prompt-1', text: 'Prompt', canMatchByText: true, createTime: 0 }, 0);
     expect(target.scrollIntoView).toHaveBeenCalledOnce();
     expect(mocks.notifyJumpFailed).not.toHaveBeenCalled();
   });
 
   it('navigates directly via fast-path when target is rendered in independent-virtual strategy', async () => {
-    mocks.navigationAlgorithm = 'independent-virtual';
     const container = document.createElement('div');
     const target = document.createElement('div');
     document.body.append(container, target);
