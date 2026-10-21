@@ -14,7 +14,6 @@ import type { Platform } from '@/platforms';
 import { getActivePlatform } from '@/platforms';
 import type { ConversationPayload } from './fetchHelpers';
 
-const BACKFILL_MAX_PAGES_FALLBACK = 10;
 // One page can carry the whole history for typical conversations: the
 // server does not cap `num_turns` at least up to 100, and the payload is
 // bounded by message count (user + assistant), not prompt count.
@@ -187,7 +186,3 @@ export function postConversationEnded(
   );
 }
 
-// Re-exported for compatibility with the previous default; consumers that
-// don't have a platform reference still get a sensible chatgpt fallback.
-const _UNUSED_BACKFILL_MAX_PAGES = BACKFILL_MAX_PAGES_FALLBACK;
-void _UNUSED_BACKFILL_MAX_PAGES;
