@@ -11,7 +11,6 @@ export const CHATGPT_MESSAGE_TYPES: PlatformMessageTypes = {
   newUserMessage: 'CHATGPT_NEW_USER_MESSAGE',
   routeChanged: 'CHATGPT_ROUTE_CHANGED',
   titleChanged: 'CHATGPT_TITLE_CHANGED',
-  setWidthSpoof: 'CHATGPT_NAVIGATOR_SET_WIDTH_SPOOF',
   configUpdate: 'LUNA_CHATGPT_CONFIG_UPDATE',
   contractMismatch: 'LUNA_CONTRACT_MISMATCH',
 };
