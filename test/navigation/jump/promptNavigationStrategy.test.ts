@@ -184,7 +184,6 @@ describe('prompt navigation strategy', () => {
   });
 
   it('initiates virtual step-loading when target is not rendered in the DOM', () => {
-    mocks.navigationAlgorithm = 'independent-virtual';
     const container = document.createElement('div');
     document.body.appendChild(container);
     mocks.getContainer.mockReturnValue(container);
@@ -208,7 +207,6 @@ describe('prompt navigation strategy', () => {
   });
 
   it('starts independent virtual search without calling the legacy path', async () => {
-    mocks.navigationAlgorithm = 'independent-virtual';
     const container = document.createElement('div');
     Object.defineProperty(container, 'scrollHeight', {
       value: 1000,
