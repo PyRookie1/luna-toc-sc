@@ -1,7 +1,7 @@
 /**
  * Platform abstraction contract.
  *
- * Every AI chat host (ChatGPT, Copilot, Gemini, Claude, …) is described by
+ * Each registered AI chat host is described by
  * a single `Platform` record composed of typed adapter interfaces. Adding a
  * new host means creating `src/platforms/<host>/` and exporting a
  * `Platform` aggregator — no edits anywhere else.
