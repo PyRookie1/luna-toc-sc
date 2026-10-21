@@ -205,9 +205,19 @@ function jumpWithIndependentVirtualNavigation(
   // DOM (id match exact, text match as fallback for id-string mismatches),
   // scroll straight to it.
   const idHit = findRenderedChatGptPrompt(message.id);
+  // A text fallback is safe only for a plain-text prompt unique in the
+  // entire conversation, not merely among currently mounted DOM elements.
+  const normalizedText = message.text.replace(/\s+/g, ' ').trim().toLowerCase();
+  const hasUniqueText = Boolean(
+    message.canMatchByText &&
+    normalizedText &&
+    context.prompts.filter((prompt) =>
+      prompt.canMatchByText &&
+      prompt.text.replace(/\s+/g, ' ').trim().toLowerCase() === normalizedText
+    ).length === 1
+  );
   const textHit =
-    idHit ??
-    (message.text ? findRenderedChatGptPromptByText(message.text) : null);
+    idHit ?? (hasUniqueText ? findRenderedChatGptPromptByText(message.text) : null);
   const renderedTarget = idHit ?? textHit;
 
   if (renderedTarget) {
