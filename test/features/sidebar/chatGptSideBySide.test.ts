@@ -11,10 +11,7 @@ import {
   disposeChatGptSideBySide,
 } from '@/features/sidebar/chatGptSideBySide';
 
-const appStylesheet = readFileSync(
-  new URL('../../../src/styles/content.css', import.meta.url),
-  'utf8'
-);
+const appStylesheet = readFileSync('src/styles/content.css', 'utf8');
 
 function setupHost(): { root: HTMLElement; sidebar: HTMLElement } {
   document.body.innerHTML = `
