@@ -1,7 +1,6 @@
 /**
  * ChatGPT namespaced window.postMessage channels. Each value mirrors a
- * constant previously inlined in `src/page/pageHook.iife.ts` and the
- * content-script message listeners.
+ * channel shared between the ChatGPT MAIN-world hook and isolated content scripts.
  */
 import type { PlatformMessageTypes } from '../platformInterface';
 
