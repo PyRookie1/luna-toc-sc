@@ -101,6 +101,7 @@ import { installTitleObserver } from './titleObserver';
       initialLoadNumTurns:
         platform.config.interceptFetchNumTurns.initialLoad,
     });
+    const requestStartedAt = Date.now();
     const response = await originalFetch(...fetchArgs);
 
     try {
@@ -115,7 +116,8 @@ import { installTitleObserver } from './titleObserver';
           response,
           requestMeta.routeKey,
           requestMeta.isInitialConversationLoad,
-          authHeaders
+          authHeaders,
+          requestStartedAt
         );
       }
 
