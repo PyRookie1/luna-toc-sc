@@ -12,8 +12,7 @@ export type ChatGptContractId =
   | 'dom.selector.message-id'
   | 'postmessage.channel.conversation-data'
   | 'postmessage.hook-flag'
-  | 'response.messages-field'
-;
+  | 'response.messages-field';
 
 /** A single ChatGPT external-contract value with parallel `formal`/`local` slots and a display label. */
 export interface ChatGptContractValue {
