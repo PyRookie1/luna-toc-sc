@@ -139,7 +139,6 @@ export const chatGptPlatform: Platform = {
     composerTextareaSelector: '.ProseMirror[contenteditable="true"]',
   },
   config: {
-    navigationAlgorithm: APP_CONFIG.platforms.chatgpt.navigationAlgorithm,
     promptTopOffsetPx: APP_CONFIG.platforms.chatgpt.promptTopOffsetPx,
     settleAttempts: APP_CONFIG.platforms.chatgpt.settleAttempts,
     backfillMaxPages: APP_CONFIG.platforms.chatgpt.backfillMaxPages,
