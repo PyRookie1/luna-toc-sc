@@ -2,6 +2,7 @@
  * Owns LunaTOC sidebar visibility, pinning, and auto-hide behavior.
  */
 import { promptContextMenuController } from '@/features/myPrompts/promptContextMenu';
+import { syncChatGptSideBySide } from '@/features/sidebar/chatGptSideBySide';
 
 const PINNED_STORAGE_KEY = 'chatTocSidebarPinned';
 const LEGACY_PINNED_STORAGE_PREFIX = 'chatTocSidebarPinned:';
@@ -239,6 +240,7 @@ export function setSidebarHidden(hidden: boolean): void {
   dock?.setAttribute('aria-hidden', String(!isHidden));
   if (dock) dock.inert = !isHidden;
   setJumpControlsVisible(!isHidden);
+  syncChatGptSideBySide();
   if (justOpened) onOpened?.();
 }
 

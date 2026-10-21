@@ -232,6 +232,19 @@ html[data-theme='light'] {
   transition: transform 160ms ease;
 }
 
+/* Reserve a right-hand column in ChatGPT only when there is enough space.
+ * The class is added to the host app shell, never to body or the extension.
+ */
+.luna-toc-chat-side-by-side {
+  box-sizing: border-box !important;
+  width: calc(100vw - var(--luna-toc-reserved-sidebar-width)) !important;
+  max-width: calc(100vw - var(--luna-toc-reserved-sidebar-width)) !important;
+  min-width: 0 !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  transition: width 160ms ease, max-width 160ms ease;
+}
+
 .navigator-topbar {
   flex: 0 0 auto;
   margin: 0 0 0 -6px;

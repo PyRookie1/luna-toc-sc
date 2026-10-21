@@ -22,6 +22,7 @@ import { APP_CONFIG } from '@/config/config';
 import { navigatorController } from '@/navigation/navigatorController';
 import { sidebarController } from '@/features/sidebar/sidebarController';
 import { createJumpToEdgeControls } from '@/features/sidebar/jumpToEdgeControls';
+import { initializeChatGptSideBySide, syncChatGptSideBySide } from '@/features/sidebar/chatGptSideBySide';
 
 /**
  * Resolves when document.body exists during document_start execution.
@@ -149,6 +150,7 @@ function initSidebarResize(sidebar: HTMLElement): void {
         Math.max(sidebarConfig.minimumWidthPx, startWidth + delta)
       );
       sidebar.style.setProperty('--navigator-width', `${nextWidth}px`);
+      syncChatGptSideBySide();
     }
 
     function handleMouseUp(): void {
@@ -228,6 +230,7 @@ export async function initializeApplication(): Promise<void> {
   initSidebarResize(sidebar);
   createJumpToEdgeControls(() => sidebarController.isMyPromptsView());
   const toggleButton = createSidebarToggleButton();
+  initializeChatGptSideBySide(sidebar);
   initializeSidebarVisibility(sidebar, toggleButton, {
     onOpened: () => {
       if (!sidebarController.isMyPromptsView()) {
