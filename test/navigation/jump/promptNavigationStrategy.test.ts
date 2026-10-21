@@ -13,6 +13,7 @@ import type { ChatGptNavigationAlgorithm } from '@/config/config';
 const mocks = vi.hoisted(() => ({
   navigationAlgorithm: 'legacy-native' as ChatGptNavigationAlgorithm,
   findPrompt: vi.fn(),
+  findText: vi.fn(),
   getContainer: vi.fn(),
   createJumpId: vi.fn(() => 'jump-id-stub'),
   getTestConfig: vi.fn(() => null),
@@ -28,7 +29,7 @@ vi.mock('@/platforms', () => ({
     navigation: {
       getScrollContainer: mocks.getContainer,
       findRenderedPrompt: mocks.findPrompt,
-      findRenderedPromptByText: vi.fn(() => null),
+      findRenderedPromptByText: mocks.findText,
       readMountedWithSidebarIdx: vi.fn(() => []),
       promptTopOffsetPx: 16,
     },
@@ -112,6 +113,40 @@ afterEach(() => {
 });
 
 describe('prompt navigation strategy', () => {
+  it('does not use text fallback for a prompt containing attachments', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    mocks.getContainer.mockReturnValue(container);
+    mocks.findPrompt.mockReturnValue(null);
+    const message = { id: 'file-prompt', text: '[文件] attachment', canMatchByText: false, createTime: 0 };
+    initializePromptNavigation({
+      getVirtualSearchContext: () => ({ conversationKey: 'conversation-1', prompts: [message] }),
+      setJumpProgress: mocks.setJumpProgress,
+      clearJumpProgress: mocks.clearJumpProgress,
+      notifyJumpFailed: mocks.notifyJumpFailed,
+    });
+    jumpToMessage(message, 0);
+    expect(mocks.findText).not.toHaveBeenCalled();
+  });
+
+  it('rejects text fallback for repeated prompts even when one is mounted', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    mocks.getContainer.mockReturnValue(container);
+    mocks.findPrompt.mockReturnValue(null);
+    const messages = ['first', 'second'].map((id) => ({
+      id, text: 'Repeat this prompt', canMatchByText: true, createTime: 0,
+    }));
+    initializePromptNavigation({
+      getVirtualSearchContext: () => ({ conversationKey: 'conversation-1', prompts: messages }),
+      setJumpProgress: mocks.setJumpProgress,
+      clearJumpProgress: mocks.clearJumpProgress,
+      notifyJumpFailed: mocks.notifyJumpFailed,
+    });
+    jumpToMessage(messages[1], 1);
+    expect(mocks.findText).not.toHaveBeenCalled();
+  });
+
   it('never jumps to top for an obsolete legacy setting', () => {
     const container = document.createElement('div');
     const target = document.createElement('div');
