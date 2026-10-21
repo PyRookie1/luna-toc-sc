@@ -49,7 +49,8 @@ export function installConversationBackfill(opts: {
 export function startBackfillIfNeeded(
   data: unknown,
   routeKey: string,
-  authHeaders: Record<string, string> | null
+  authHeaders: Record<string, string> | null,
+  requestStartedAt?: number
 ): boolean {
   const pageInfo = (data as ConversationPayload | undefined)?.page_info;
 
@@ -60,7 +61,8 @@ export function startBackfillIfNeeded(
   backfillPreviousPages(
     routeKey,
     pageInfo.start_cursor,
-    authHeaders
+    authHeaders,
+    requestStartedAt
   ).finally(() => {
     backfillingConversationIds.delete(routeKey);
   });
@@ -75,7 +77,8 @@ export function startBackfillIfNeeded(
 async function backfillPreviousPages(
   conversationId: string,
   startCursor: string,
-  authHeaders: Record<string, string> | null
+  authHeaders: Record<string, string> | null,
+  requestStartedAt?: number
 ): Promise<void> {
   const platform = installedPlatform ?? getActivePlatform();
   let cursor = startCursor;
@@ -103,7 +106,7 @@ async function backfillPreviousPages(
         return;
       }
 
-      postConversationPayload(data, conversationId, platform);
+      postConversationPayload(data, conversationId, platform, requestStartedAt);
 
       const pageInfo = data?.page_info;
       if (pageInfo?.has_previous_page === false) {
@@ -141,11 +144,13 @@ export function isBackfilling(routeKey: string): boolean {
 export function postConversationPayload(
   payload: unknown,
   routeKey: string,
-  platform: Platform = installedPlatform ?? getActivePlatform()
+  platform: Platform = installedPlatform ?? getActivePlatform(),
+  requestStartedAt?: number
 ): void {
   window.postMessage(
     {
       type: platform.pageHook.messages.conversationData,
+      ...(requestStartedAt !== undefined ? { requestStartedAt } : {}),
       routeKey,
       payload,
     },
