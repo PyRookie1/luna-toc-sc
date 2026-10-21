@@ -1,7 +1,6 @@
 /**
  * Injected page-context hook. Captures ChatGPT conversation fetch payloads,
- * streams newly submitted user prompts, and spoofs width media queries while
- * the LunaTOC sidebar is visible.
+ * streams newly submitted user prompts without altering host media queries.
  *
  * This entry is a thin per-platform orchestrator: the heavy lifting lives
  * in the focused modules under `src/pageHook/` (platform-agnostic) and the
@@ -51,8 +50,6 @@ import { installTitleObserver } from './titleObserver';
   installConversationBackfill({ originalFetch, platform });
   installContractAlerts({ originalFetch });
   const observeRefreshHeaders = installConversationRefresh(originalFetch, platform);
-  platform.pageHook.installMatchMediaSpoof();
-  platform.pageHook.installMatchMediaToggleListener();
   installHistoryHook(platform.pageHook.messages.routeChanged);
   installTitleObserver(platform.pageHook.messages.titleChanged);
 
