@@ -1,6 +1,6 @@
 # Bug Index
 
-This document is the master registry for tracking bugs and regressions in Luna TOC.
+This document is the master registry for tracking bugs and regressions in LunaTOC-SC.
 
 ## ID & Ordering Rules
 
