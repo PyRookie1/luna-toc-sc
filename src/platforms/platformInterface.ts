@@ -278,7 +278,6 @@ export interface PlatformContractTable<Id extends string> {
  * chatgpt block; new platforms copy it.
  */
 export interface PlatformConfigBlock {
-  navigationAlgorithm: 'legacy-native' | 'independent-virtual';
   promptTopOffsetPx: number;
   settleAttempts: number;
   backfillMaxPages: number;
