@@ -85,7 +85,9 @@ describe('conversationStore', () => {
       id: 'abandoned', author: { role: 'user' }, content: { parts: ['Old branch'] }, create_time: 1,
     };
     const staleRequestStartedAt = Date.now() - 1000;
-    expect(store.replaceWithFreshSnapshot({ messages: [current] }, 'conv-123')).toBe(true);
+    expect(store.replaceWithFreshSnapshot({ messages: [current, {
+      id: 'answer', author: { role: 'assistant' }, content: { parts: ['Reply'] }, create_time: 2.5,
+    }] }, 'conv-123')).toBe(true);
     store.handleConversationData({ messages: [abandoned] }, 'conv-123', staleRequestStartedAt);
     expect(store.getMessages().map((message) => message.id)).toEqual(['active']);
     store.handleConversationData({
