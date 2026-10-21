@@ -5,6 +5,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createSidebarToggleButton } from '@/features/SidebarToggleButton';
 import { promptContextMenuController } from '@/features/myPrompts/promptContextMenu';
+import { initializeChatGptSideBySide, disposeChatGptSideBySide } from '@/features/sidebar/chatGptSideBySide';
 import {
   initializeSidebarVisibility,
   setSidebarHidden,
@@ -12,6 +13,7 @@ import {
 } from '@/features/sidebarVisibility';
 
 afterEach(() => {
+  disposeChatGptSideBySide();
   promptContextMenuController.close();
   vi.useRealTimers();
   sessionStorage.removeItem('chatTocSidebarPinned');
@@ -132,6 +134,29 @@ describe('sidebar reveal handle and right-side tools', () => {
     vi.advanceTimersByTime(350);
     expect(sidebar.getAttribute('aria-hidden')).toBe('true');
     expect(promptContextMenuController.getSnapshot()).toBeNull();
+  });
+
+  it('resizes the ChatGPT conversation when the real sidebar opens and closes', () => {
+    const { sidebar, trigger } = setup();
+    sidebar.style.setProperty('--navigator-width', '300px');
+    const root = document.createElement('div');
+    root.id = 'root';
+    root.innerHTML = '<nav id="chatgpt-nav"></nav><main id="chatgpt-main"><div id="thread"></div></main>';
+    document.body.prepend(root);
+
+    initializeChatGptSideBySide(sidebar);
+    initializeSidebarVisibility(sidebar, trigger);
+    const main = document.getElementById('chatgpt-main')!;
+    expect(main.classList.contains('luna-toc-chat-side-by-side')).toBe(false);
+
+    trigger.dispatchEvent(new Event('pointerenter'));
+    expect(main.classList.contains('luna-toc-chat-side-by-side')).toBe(true);
+    expect(main.style.getPropertyValue('--luna-toc-reserved-sidebar-width')).toBe('300px');
+    expect(root.classList.contains('luna-toc-chat-side-by-side')).toBe(false);
+
+    setSidebarHidden(true);
+    expect(main.classList.contains('luna-toc-chat-side-by-side')).toBe(false);
+    expect(main.style.getPropertyValue('--luna-toc-reserved-sidebar-width')).toBe('');
   });
 
   it('keeps the trigger hidden for a pinned sidebar and restores it after unpinning', () => {

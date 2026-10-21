@@ -1,100 +1,121 @@
 /**
- * Reserves space for the LunaTOC sidebar in ChatGPT's app layout without
- * changing window.matchMedia, the document body, or message scroll offsets.
+ * Reserves space beside ChatGPT's conversation surface for LunaTOC.
+ * Never shifts body or changes the host page's responsive media queries.
  */
-const ROOT_CLASS = 'luna-toc-chat-side-by-side';
+const CHAT_SURFACE_CLASS = 'luna-toc-chat-side-by-side';
 const WIDTH_PROPERTY = '--luna-toc-reserved-sidebar-width';
-const MIN_AVAILABLE_CHAT_WIDTH_PX = 720;
+const MIN_AVAILABLE_CHAT_WIDTH_PX = 560;
+const CHAT_CONTENT_SELECTOR = [
+  '#thread',
+  '#thread-bottom-container',
+  '#prompt-textarea',
+  '[data-turn]',
+  '[data-testid^="conversation-turn"]',
+  '.ProseMirror[contenteditable="true"]',
+].join(', ');
 
 let sidebar: HTMLElement | null = null;
-let currentAppRoot: HTMLElement | null = null;
+let currentChatSurface: HTMLElement | null = null;
 let sidebarSizeObserver: ResizeObserver | null = null;
-let bodyChildObserver: MutationObserver | null = null;
+let chatTreeObserver: MutationObserver | null = null;
 
 /**
- * Finds ChatGPT's outer application container, without selecting any extension
- * portal or dialog. A missing host is a deliberate signal to keep overlay mode.
+ * Chooses the actual chat surface, not the app root: the latter may be fixed
+ * at viewport width while its inner <main> owns message/composer layout.
  */
-function getChatGptAppRoot(): HTMLElement | null {
+function getChatGptChatSurface(): HTMLElement | null {
   if (!document.body) return null;
 
-  for (const id of ['root', '__next']) {
-    const knownRoot = document.getElementById(id);
-    if (knownRoot instanceof HTMLElement &&
-        document.body.contains(knownRoot) &&
-        !sidebar?.contains(knownRoot)) {
-      return findBodyChild(knownRoot);
-    }
-  }
+  const candidates = Array.from(
+    document.body.querySelectorAll<HTMLElement>('main, [role="main"]')
+  ).filter((candidate) =>
+    !sidebar?.contains(candidate) &&
+    !candidate.closest('[id^="luna-toc-"]') &&
+    !candidate.id.startsWith('luna-toc-')
+  );
 
-  const main = document.body.querySelector('main');
-  if (!(main instanceof HTMLElement) || sidebar?.contains(main)) return null;
-  const candidate = findBodyChild(main);
-  if (candidate === sidebar || candidate.id.startsWith('luna-toc-')) return null;
-  return candidate;
+  const main =
+    candidates.find((candidate) =>
+      candidate.querySelector(CHAT_CONTENT_SELECTOR)
+    ) ??
+    candidates.find((candidate) => candidate.tagName === 'MAIN') ??
+    candidates[0] ??
+    null;
+  if (!main) return null;
+
+  // Some ChatGPT layouts place the header beside <main> inside a dedicated
+  // chat column. Prefer shrinking that column so its header moves as well,
+  // but never select the wrapper containing ChatGPT's native navigation.
+  const parent = main.parentElement;
+  if (!parent || parent === document.body ||
+      parent.id === 'root' || parent.id === '__next') return main;
+
+  const siblings = Array.from(parent.children).filter((child) => child !== main);
+  const hasHeaderSibling = siblings.some((child) =>
+    child.matches('header, [role="banner"]') ||
+    Boolean(child.querySelector('header, [role="banner"]'))
+  );
+  const hasNativeNavigation = siblings.some((child) =>
+    child.matches('nav, #stage-slideover-sidebar') ||
+    Boolean(child.querySelector('#stage-slideover-sidebar'))
+  );
+  return hasHeaderSibling && !hasNativeNavigation ? parent : main;
 }
 
-/** Returns the top-level host child containing a recognized app element. */
-function findBodyChild(element: HTMLElement): HTMLElement {
-  let current = element;
-  while (current.parentElement && current.parentElement !== document.body) {
-    current = current.parentElement;
-  }
-  return current;
-}
-
-/** Returns the rendered or configured width during sidebar resize. */
+/** Returns the rendered sidebar width, falling back to the current drag size. */
 function getSidebarWidthPx(element: HTMLElement): number {
-  const renderedWidth = element.getBoundingClientRect().width;
-  if (renderedWidth > 0) return Math.ceil(renderedWidth);
+  const rendered = element.getBoundingClientRect().width;
+  if (rendered > 0) return Math.ceil(rendered);
 
-  const configuredWidth = Number.parseFloat(
+  const configured = Number.parseFloat(
     element.style.getPropertyValue('--navigator-width')
   );
-  return Number.isFinite(configuredWidth) && configuredWidth > 0
-    ? Math.ceil(configuredWidth)
+  return Number.isFinite(configured) && configured > 0
+    ? Math.ceil(configured)
     : 0;
 }
 
-/** Restores ChatGPT's native width when overlay mode is appropriate. */
-function restoreAppRoot(): void {
-  currentAppRoot?.classList.remove(ROOT_CLASS);
-  currentAppRoot?.style.removeProperty(WIDTH_PROPERTY);
-  currentAppRoot = null;
+/** Removes only LunaTOC's styles from the previously selected chat surface. */
+function restoreChatSurface(): void {
+  currentChatSurface?.classList.remove(CHAT_SURFACE_CLASS);
+  currentChatSurface?.style.removeProperty(WIDTH_PROPERTY);
+  currentChatSurface = null;
 }
 
 /**
- * Recomputes reserved space on sidebar open/close, drag resizing, viewport
- * changes, and host app replacement. Narrow windows retain overlay behavior.
+ * Reserves the sidebar width inside ChatGPT's actual content surface.
+ * Narrow viewports retain the existing overlay layout.
  */
 export function syncChatGptSideBySide(): void {
-  const appRoot = getChatGptAppRoot();
+  const chatSurface = getChatGptChatSurface();
   const width = sidebar ? getSidebarWidthPx(sidebar) : 0;
-  const sidebarOpen = Boolean(
+  const isOpen = Boolean(
     sidebar &&
     !sidebar.classList.contains('luna-toc-navigator-hidden') &&
     sidebar.getAttribute('aria-hidden') !== 'true'
   );
-  const canReserve = sidebarOpen && width > 0 &&
+  const canReserve = isOpen && width > 0 &&
     window.innerWidth - width >= MIN_AVAILABLE_CHAT_WIDTH_PX &&
-    Boolean(appRoot) &&
-    appRoot !== sidebar;
+    chatSurface !== null;
 
-  if (!canReserve || !appRoot) {
-    restoreAppRoot();
+  if (!canReserve || !chatSurface) {
+    restoreChatSurface();
     return;
   }
-  if (currentAppRoot !== appRoot) {
-    restoreAppRoot();
-    currentAppRoot = appRoot;
+
+  if (currentChatSurface !== chatSurface) {
+    restoreChatSurface();
+    currentChatSurface = chatSurface;
   }
-  currentAppRoot.style.setProperty(WIDTH_PROPERTY, `${width}px`);
-  currentAppRoot.classList.add(ROOT_CLASS);
+
+  currentChatSurface.style.setProperty(WIDTH_PROPERTY, `${width}px`);
+  currentChatSurface.classList.add(CHAT_SURFACE_CLASS);
 }
 
 /**
- * Starts the isolated host-layout adapter for the current sidebar. Its
- * observers track changes without scanning conversation messages.
+ * Installs resize and SPA-layout listeners. The host tree watcher only
+ * recomputes when the chat surface is absent or has been replaced; token
+ * streaming inside an unchanged conversation must not cause layout work.
  */
 export function initializeChatGptSideBySide(element: HTMLElement): void {
   disposeChatGptSideBySide();
@@ -105,20 +126,26 @@ export function initializeChatGptSideBySide(element: HTMLElement): void {
     sidebarSizeObserver = new ResizeObserver(syncChatGptSideBySide);
     sidebarSizeObserver.observe(element);
   }
+
   if (document.body) {
-    bodyChildObserver = new MutationObserver(syncChatGptSideBySide);
-    bodyChildObserver.observe(document.body, { childList: true });
+    chatTreeObserver = new MutationObserver(() => {
+      if (!currentChatSurface?.isConnected) syncChatGptSideBySide();
+    });
+    chatTreeObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
   }
   syncChatGptSideBySide();
 }
 
-/** Disconnects listeners and returns the original ChatGPT app sizing. */
+/** Releases observers and fully restores the host conversation layout. */
 export function disposeChatGptSideBySide(): void {
   window.removeEventListener('resize', syncChatGptSideBySide);
   sidebarSizeObserver?.disconnect();
-  bodyChildObserver?.disconnect();
+  chatTreeObserver?.disconnect();
   sidebarSizeObserver = null;
-  bodyChildObserver = null;
-  restoreAppRoot();
+  chatTreeObserver = null;
+  restoreChatSurface();
   sidebar = null;
 }
