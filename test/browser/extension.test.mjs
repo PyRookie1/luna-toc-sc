@@ -139,7 +139,10 @@ test('Chromium MV3: TOC, search, layout, SPA and failure paths',{timeout:150000}
       },{routeKey,requestId:1});
       await page.waitForFunction(()=>document.getElementById('luna-gpt-status-timer')?.shadowRoot?.querySelector('#label')?.textContent==='GPT 正在生成');
       const before=await readTimer();
-      await page.waitForTimeout(1100);
+      await page.waitForFunction((previous)=>{
+        const elapsed=document.getElementById('luna-gpt-status-timer')?.shadowRoot?.querySelector('#elapsed')?.textContent;
+        return Boolean(elapsed&&elapsed!==previous);
+      },before.elapsed,{timeout:3000});
       const after=await readTimer();
       assert.notEqual(after.elapsed,before.elapsed,'the independent timer must keep ticking');
       assert.equal(after.hidden,false,'the timer remains visible regardless of sidebar visibility');
