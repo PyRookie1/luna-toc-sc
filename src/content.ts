@@ -9,9 +9,13 @@ import { startPageHookMismatchBridge, startChatGptConfigSync } from '@/features/
 import { initializeReactHost } from '@/reactHost/reactHost';
 import { startToolbarCompatibilityMonitor } from '@/features/contractAlert/toolbarMonitor';
 import { startMarkdownBoldRepair } from '@/platforms/chatgpt/markdownBoldRepair';
+import { startGptStatusTimer } from '@/features/gptStatusTimer/gptStatusTimer';
 
 // Start the one-time reconciliation listener before sidebar setup.
 initializeConversationLifecycle();
+
+// Keep GPT request status visible independently of ChatGPT's native status text and the sidebar.
+startGptStatusTimer();
 
 // Repair raw Markdown bold markers only in rendered assistant answer text.
 startMarkdownBoldRepair();

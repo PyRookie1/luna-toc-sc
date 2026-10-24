@@ -11,6 +11,17 @@ import type { FetchArgs } from './fetchHelpers';
 
 const NEW_USER_MESSAGE_TYPE = 'CHATGPT_NEW_USER_MESSAGE';
 
+export interface StreamLifecycleCallbacks {
+  /** Called when a non-empty response chunk arrives. */
+  onActivity?: () => void;
+  /** Called when the SSE stream contains the explicit [DONE] marker. */
+  onDone?: () => void;
+  /** Called when the response reader reaches a normal end. */
+  onEnd?: () => void;
+  /** Called when reading the cloned response stream fails. */
+  onError?: (error: unknown) => void;
+}
+
 interface OutgoingMessage {
   id: string;
   author?: { role?: string };
@@ -84,33 +95,72 @@ export function extractOutgoingMessage(
 export async function inspectStream(
   response: Response,
   routeKey: string,
-  messageType: string = NEW_USER_MESSAGE_TYPE
+  messageType: string = NEW_USER_MESSAGE_TYPE,
+  lifecycle?: StreamLifecycleCallbacks
 ): Promise<void> {
-  const reader = response.clone().body?.getReader();
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  const reportError = (error: unknown): void => {
+    try {
+      lifecycle?.onError?.(error);
+    } catch {
+      // Status reporting must not affect message capture.
+    }
+  };
 
-  if (!reader) return;
+  try {
+    reader = response.clone().body?.getReader();
+  } catch (error) {
+    reportError(error);
+    throw error;
+  }
+
+  if (!reader) {
+    safelyNotify(lifecycle?.onEnd);
+    return;
+  }
 
   // Keep incomplete lines local to each response.
   let streamBuffer = '';
   const decoder = new TextDecoder();
 
-  while (true) {
-    const { done, value } = await reader.read();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
 
-    if (done) {
-      if (streamBuffer.trim()) {
-        processStreamLine(streamBuffer, routeKey, messageType);
-        streamBuffer = '';
+      if (done) {
+        if (streamBuffer.trim()) {
+          processStreamLine(streamBuffer, routeKey, messageType, lifecycle?.onDone);
+          streamBuffer = '';
+        }
+
+        safelyNotify(lifecycle?.onEnd);
+        break;
       }
 
-      break;
+      if (value?.byteLength) safelyNotify(lifecycle?.onActivity);
+      streamBuffer += decoder.decode(value, {
+        stream: true,
+      });
+
+      streamBuffer = processBufferedStream(
+        streamBuffer,
+        routeKey,
+        messageType,
+        lifecycle?.onDone
+      );
     }
+  } catch (error) {
+    reportError(error);
+    throw error;
+  }
+}
 
-    streamBuffer += decoder.decode(value, {
-      stream: true,
-    });
-
-    streamBuffer = processBufferedStream(streamBuffer, routeKey, messageType);
+function safelyNotify(callback?: () => void): void {
+  if (!callback) return;
+  try {
+    callback();
+  } catch {
+    // Lifecycle callbacks are observational and must not break stream parsing.
   }
 }
 
@@ -119,12 +169,15 @@ export async function inspectStream(
  * trailing partial line for the next stream chunk.
  */
 function processBufferedStream(
-  buffer: string, routeKey: string, messageType: string
+  buffer: string,
+  routeKey: string,
+  messageType: string,
+  onDone?: () => void
 ): string {
   const lines = buffer.split('\n');
   const remainder = lines.pop() || '';
   for (const line of lines) {
-    processStreamLine(line, routeKey, messageType);
+    processStreamLine(line, routeKey, messageType, onDone);
   }
   return remainder;
 }
@@ -136,7 +189,8 @@ function processBufferedStream(
 function processStreamLine(
   line: string,
   routeKey: string,
-  messageType: string
+  messageType: string,
+  onDone?: () => void
 ): void {
   if (!line.startsWith('data: ')) {
     return;
@@ -144,7 +198,9 @@ function processStreamLine(
 
   const jsonText = line.slice(6).trim();
 
-  if (!jsonText || jsonText === '[DONE]') {
+  if (!jsonText) return;
+  if (jsonText === '[DONE]') {
+    safelyNotify(onDone);
     return;
   }
 

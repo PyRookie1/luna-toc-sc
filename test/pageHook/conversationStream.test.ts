@@ -44,6 +44,57 @@ describe('outgoing user-message capture', () => {
   });
 });
 
+describe('stream lifecycle callbacks', () => {
+  it('reports response activity, explicit completion and normal end', async () => {
+    const postMessage = vi.fn();
+    vi.stubGlobal('window', { postMessage });
+    let controller!: ReadableStreamDefaultController<Uint8Array>;
+    const stream = new ReadableStream<Uint8Array>({
+      start(value) { controller = value; },
+    });
+    const lifecycle = {
+      onActivity: vi.fn(),
+      onDone: vi.fn(),
+      onEnd: vi.fn(),
+      onError: vi.fn(),
+    };
+    const inspection = inspectStream(new Response(stream), 'route-done', undefined, lifecycle);
+    controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+    controller.close();
+
+    await inspection;
+    expect(lifecycle.onActivity).toHaveBeenCalledTimes(1);
+    expect(lifecycle.onDone).toHaveBeenCalledTimes(1);
+    expect(lifecycle.onEnd).toHaveBeenCalledTimes(1);
+    expect(lifecycle.onError).not.toHaveBeenCalled();
+  });
+
+  it('reports a stream reader error and preserves the rejected promise', async () => {
+    const failure = Object.assign(new Error('reader failed'), { name: 'AbortError' });
+    const lifecycle = { onError: vi.fn() };
+    const response = new Response(new ReadableStream<Uint8Array>({
+      start(controller) { controller.error(failure); },
+    }));
+
+    await expect(inspectStream(response, 'route-error', undefined, lifecycle)).rejects.toThrow('reader failed');
+    expect(lifecycle.onError).toHaveBeenCalledWith(failure);
+  });
+
+  it('reports an unmarked stream end without claiming an explicit completion', async () => {
+    const postMessage = vi.fn();
+    vi.stubGlobal('window', { postMessage });
+    const lifecycle = { onDone: vi.fn(), onEnd: vi.fn() };
+    await inspectStream(
+      new Response(new ReadableStream<Uint8Array>({ start(controller) { controller.close(); } })),
+      'route-end',
+      undefined,
+      lifecycle
+    );
+    expect(lifecycle.onDone).not.toHaveBeenCalled();
+    expect(lifecycle.onEnd).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('concurrent SSE readers', () => {
   it('keeps interleaved partial messages separated by route', async () => {
     const postMessage = vi.fn();
