@@ -117,6 +117,13 @@ describe('independent GPT status timer', () => {
     expect(labelText()).toBe('已收到响应，等待生成内容');
   });
 
+  it('keeps the indicator when a route notification does not change the conversation key', () => {
+    sendStarted(1);
+    emit({ type: 'CHATGPT_ROUTE_CHANGED' });
+    expect((document.getElementById('luna-gpt-status-timer') as HTMLElement).hidden).toBe(false);
+    expect(labelText()).toBe('正在等待 GPT 响应');
+  });
+
   it('clears the indicator after a normal SPA route change', () => {
     sendStarted(1);
     history.pushState(null, '', '/c/another-conversation');

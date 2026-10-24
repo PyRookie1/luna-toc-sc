@@ -228,6 +228,13 @@ export function startGptStatusTimer(platform = getActivePlatform()): () => void 
   const resetForRoute = (): void => {
     const request = activeRequest;
     const currentRoute = currentRouteKey();
+
+    // History updates that keep the same conversation must not hide the timer.
+    if (request && request.routeKey === currentRoute) {
+      render();
+      return;
+    }
+
     // ChatGPT may replace the new-chat URL with /c/<id> while the first
     // prompt is being submitted. Rebind only this short initial transition.
     if (
