@@ -75,7 +75,6 @@ function isStopControl(target: EventTarget | null): boolean {
 }
 
 export function startGptStatusTimer(platform = getActivePlatform()): () => void {
-  const platform = getActivePlatform();
   const routeChangedType = platform.pageHook.messages.routeChanged;
 
   let activeRequest: ActiveRequest | null = null;
