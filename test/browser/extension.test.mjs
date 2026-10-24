@@ -118,6 +118,37 @@ test('Chromium MV3: TOC, search, layout, SPA and failure paths',{timeout:150000}
       assert.equal(await page.locator('#native-nav').count(),1);
     });
 
+    await t.test('GPT status timer is independent of the sidebar and native status text',async()=>{
+      const routeKey=conversationId;
+      const timer=page.locator('#luna-gpt-status-timer');
+      await page.evaluate(({type,routeKey,requestId})=>{
+        window.postMessage({type,routeKey,requestId},location.origin);
+      },{type:'LUNA_GPT_STATUS_REQUEST_STARTED',routeKey,requestId:1});
+      await page.waitForFunction(()=>{
+        const host=document.getElementById('luna-gpt-status-timer');
+        return Boolean(host&&!host.hidden&&host.shadowRoot?.querySelector('#label')?.textContent==='正在等待 GPT 响应');
+      });
+      const readTimer=()=>timer.evaluate(host=>({
+        hidden:host.hidden,
+        label:host.shadowRoot?.querySelector('#label')?.textContent,
+        elapsed:host.shadowRoot?.querySelector('#elapsed')?.textContent,
+      }));
+      await page.evaluate(({routeKey,requestId})=>{
+        window.postMessage({type:'LUNA_GPT_STATUS_RESPONSE_RECEIVED',routeKey,requestId},location.origin);
+        window.postMessage({type:'LUNA_GPT_STATUS_STREAM_ACTIVITY',routeKey,requestId},location.origin);
+      },{routeKey,requestId:1});
+      await page.waitForFunction(()=>document.getElementById('luna-gpt-status-timer')?.shadowRoot?.querySelector('#label')?.textContent==='GPT 正在生成');
+      const before=await readTimer();
+      await page.waitForTimeout(1100);
+      const after=await readTimer();
+      assert.notEqual(after.elapsed,before.elapsed,'the independent timer must keep ticking');
+      assert.equal(after.hidden,false,'the timer remains visible regardless of sidebar visibility');
+      await page.evaluate(({routeKey,requestId})=>{
+        window.postMessage({type:'LUNA_GPT_STATUS_COMPLETED',routeKey,requestId},location.origin);
+      },{routeKey,requestId:1});
+      await page.waitForFunction(()=>document.getElementById('luna-gpt-status-timer')?.shadowRoot?.querySelector('#label')?.textContent==='生成完成');
+    });
+
     await t.test('repairs raw Markdown bold in dynamically mounted assistant answers only',async()=>{
       await page.evaluate(()=>{
         const answer=document.createElement('article');

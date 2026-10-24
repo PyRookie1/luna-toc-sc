@@ -95,3 +95,12 @@
 ## 对话删除确认
 
 页面 MAIN world 删除事件不授权本地删除。`src/background/remoteDeletionObserver.ts` 在浏览器网络层观察两个 ChatGPT 站点的顶层会话 DELETE 或非归档 PATCH `is_visible=false`，只在请求完成且返回 2xx 后通过扩展 runtime 向原标签页发送通知。隔离世界重新验证当前登录账号与别名归属，再通过原有共享队列写入删除围栏并清理别名；页面 `postMessage`、失败请求、重定向、非 2xx、账号变化或存储读取失败均不触发清理。该方案新增 `webRequest` 和两个 ChatGPT 站点的主机权限，不会阻止或修改请求，也不持久化请求正文。
+
+
+## GPT 状态计时器
+
+- `src/features/gptStatusTimer/gptStatusTimer.ts` 在 ISOLATED world 创建 Shadow DOM 浮层；浮层不依赖目录侧边栏，也不读取或改写 ChatGPT 原生思考文字。
+- `src/features/gptStatusTimer/protocol.ts` 定义 MAIN/ISOLATED world 的请求开始、响应到达、流活动、明确完成、正常结束、停止和异常状态消息。
+- `src/pageHook/pageHook.iife.ts` 只观察发送消息请求与克隆响应流的生命周期；响应流活动信号最多每 750ms 发送一次，不记录消息正文、不增加权限、不发起额外网络请求。
+- 计时器按请求 ID 与会话路由丢弃迟到事件。10 秒未收到响应或新数据时显示等待/无新数据提示，不推断模型已经停止；终态保留 8 秒后隐藏。用户点击可识别的停止生成按钮时立即显示停止状态。
+- Vitest 覆盖计时、停滞提示、过期请求、手动停止和 SPA 路由切换；Chromium fixture 覆盖 MAIN/ISOLATED 消息联动。真实 ChatGPT 的 DOM 选择器与后端行为仍需真实浏览器验收。
