@@ -1,9 +1,9 @@
 # LunaTOC-SC — Project Overview
 
-Updated: 2026-10-24. Facts below are based on the current repository files and CI configuration.
+Updated: 2026-10-25. Facts below are based on the current repository files and CI configuration.
 
 ## Purpose and users
-A Chrome Manifest V3 extension that adds a table of contents/navigation experience to ChatGPT conversations, with prompt management and configurable theme/sidebar presentation.
+A Chrome Manifest V3 extension that adds a table of contents/navigation experience to ChatGPT conversations, prompt management, configurable theme/sidebar presentation, and an independent GPT request-status timer.
 
 ## Runtime and technology
 - Target hosts: `https://chatgpt.com/*` and `https://chat.openai.com/*`.
@@ -33,7 +33,7 @@ See [RUNBOOK.md](RUNBOOK.md) for backup, restore, CI and release operations.
 ## Release and governance
 CI does not publish. The manual release workflow requires choosing `main` and explicitly confirming publication. Historical releases and tags are retained. Rollback of extension code does not automatically roll back local user data.
 
-**Known governance gap:** as of 2026-10-24, `main` branch protection is not enabled. Repository settings must be changed by an administrator; the connected GitHub capability available to this task does not expose a branch-protection write operation. Do not treat PR CI success as a substitute for this configuration.
+**Branch governance:** as of 2026-10-25, GitHub Ruleset 25771265 is active for `main`, requires a PR and both CI jobs, enforces strict status checks, blocks force pushes/deletion, and has no bypass actors. Verify the live ruleset before any future governance changes.
 
 
 ## 账号数据边界（2026-10-24）
